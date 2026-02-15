@@ -10,7 +10,7 @@ A Spring Boot mock integration for the Nafath authentication service (Saudi Arab
 ## Quick Start
 
 ```bash
-mvn clean install
+mvn clean package spring-boot:repackage -U -X
 mvn spring-boot:run
 ```
 
