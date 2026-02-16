@@ -13,8 +13,25 @@ import com.aiman.api.repository.NafathRequestRepo;
 public class NafathService {
     
     @Autowired private NafathRequestRepo nafathRequestRepo;
-
+    private boolean isValidNationalId(String nationalId){
+        int sum = 0;
+        for (int i = 0; i < 9; i++) {
+            int digit = Character.getNumericValue(nationalId.charAt(i));
+            if (i % 2 == 0) {
+                int doubled = digit * 2;
+                sum += (doubled > 9) ? (doubled - 9) : doubled;
+            } else {
+                sum += digit;
+            }
+        }
+        int checkDigit = Character.getNumericValue(nationalId.charAt(9));
+        return (10 - (sum % 10)) % 10 == checkDigit;
+    }
+    
     public NafathRequest initiateNafathRequest(String nationalId){
+        if(!isValidNationalId(nationalId)){
+            throw new IllegalArgumentException("Invalid National ID format");
+        }
         NafathRequest nafathRequest = new NafathRequest();
 
         nafathRequest.setNationalId(nationalId);

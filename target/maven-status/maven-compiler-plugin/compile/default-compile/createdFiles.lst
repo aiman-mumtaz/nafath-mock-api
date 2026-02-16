@@ -1,4 +1,6 @@
+com/aiman/api/exception/GlobalExceptionHandler.class
 com/aiman/api/repository/NafathRequestRepo.class
+com/aiman/api/dto/ErrorResponse.class
 com/aiman/api/controller/NafathController.class
 com/aiman/api/entity/NafathRequest.class
 com/aiman/api/dto/InitiateRequest.class

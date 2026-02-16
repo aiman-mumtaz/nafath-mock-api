@@ -1,7 +1,9 @@
 /Users/apple/Desktop/projects/spring-boot/nafath-mock-api/src/main/java/com/aiman/api/ApiApplication.java
 /Users/apple/Desktop/projects/spring-boot/nafath-mock-api/src/main/java/com/aiman/api/controller/NafathController.java
+/Users/apple/Desktop/projects/spring-boot/nafath-mock-api/src/main/java/com/aiman/api/dto/ErrorResponse.java
 /Users/apple/Desktop/projects/spring-boot/nafath-mock-api/src/main/java/com/aiman/api/dto/InitiateRequest.java
 /Users/apple/Desktop/projects/spring-boot/nafath-mock-api/src/main/java/com/aiman/api/dto/NafathResponse.java
 /Users/apple/Desktop/projects/spring-boot/nafath-mock-api/src/main/java/com/aiman/api/entity/NafathRequest.java
+/Users/apple/Desktop/projects/spring-boot/nafath-mock-api/src/main/java/com/aiman/api/exception/GlobalExceptionHandler.java
 /Users/apple/Desktop/projects/spring-boot/nafath-mock-api/src/main/java/com/aiman/api/repository/NafathRequestRepo.java
 /Users/apple/Desktop/projects/spring-boot/nafath-mock-api/src/main/java/com/aiman/api/service/NafathService.java
