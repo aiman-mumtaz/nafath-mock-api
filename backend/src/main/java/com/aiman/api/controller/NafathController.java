@@ -14,6 +14,8 @@ import com.aiman.api.dto.NafathResponse;
 import com.aiman.api.entity.NafathRequest;
 import com.aiman.api.service.NafathService;
 
+import jakarta.validation.Valid;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,7 +32,7 @@ public class NafathController {
 
     // 1. Initiate the request
     @PostMapping("/initiate")
-    public ResponseEntity<NafathRequest> initiateNafathRequest(@RequestBody InitiateRequest req){
+    public ResponseEntity<NafathRequest> initiateNafathRequest(@Valid @RequestBody InitiateRequest req){
         return ResponseEntity.ok(nafathService.initiateNafathRequest(req.nationalId()));
     }
     // 2. Poll for status
