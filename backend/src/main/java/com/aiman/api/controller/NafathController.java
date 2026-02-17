@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,9 +38,20 @@ public class NafathController {
     }
     // 2. Poll for status
     @GetMapping("/status/{id}")
-    public ResponseEntity<NafathResponse> poll (@PathVariable UUID id) {
-        String status = nafathService.checkStatus(id);
-        return ResponseEntity.ok(new NafathResponse(id, null, status));
+    public ResponseEntity<?> poll (@PathVariable String id) {
+        // String status = nafathService.checkStatus(id);
+        // return ResponseEntity.ok(new NafathResponse(id, null, status));
+        try {
+            UUID uuid = UUID.fromString(id);
+            
+            String status = nafathService.checkStatus(uuid);
+            return ResponseEntity.ok(new NafathResponse(uuid, null, status));
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body("Invalid ID format. Please provide a valid UUID.");
+        }
     }
     
     // 3. Mock simulate the user clicking "Approve" in the Nafath App
