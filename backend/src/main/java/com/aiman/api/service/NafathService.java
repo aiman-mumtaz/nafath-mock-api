@@ -1,54 +1,39 @@
 package com.aiman.api.service;
 
-import java.util.Random;
-import java.util.UUID;
-
+import com.aiman.api.entity.NafathRequest;
+import com.aiman.api.repository.NafathRequestRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.aiman.api.entity.NafathRequest;
-import com.aiman.api.repository.NafathRequestRepo;
+import java.util.Random;
+import java.util.UUID;
 
 @Service
 public class NafathService {
-    
-    @Autowired private NafathRequestRepo nafathRequestRepo;
-    private boolean isValidNationalId(String nationalId){
-        int sum = 0;
-        for (int i = 0; i < 9; i++) {
-            int digit = Character.getNumericValue(nationalId.charAt(i));
-            if (i % 2 == 0) {
-                int doubled = digit * 2;
-                sum += (doubled > 9) ? (doubled - 9) : doubled;
-            } else {
-                sum += digit;
-            }
-        }
-        int checkDigit = Character.getNumericValue(nationalId.charAt(9));
-        return (10 - (sum % 10)) % 10 == checkDigit;
-    }
-    
-    public NafathRequest initiateNafathRequest(String nationalId){
-        if(!isValidNationalId(nationalId)){
-            throw new IllegalArgumentException("Invalid National ID format");
-        }
-        NafathRequest nafathRequest = new NafathRequest();
 
-        nafathRequest.setNationalId(nationalId);
-        nafathRequest.setRandomCode(new Random().nextInt(90)+10);
+    @Autowired
+    private NafathRequestRepo repository;
 
-        return nafathRequestRepo.save(nafathRequest);
+    public NafathRequest initiateNafathRequest(String nationalId) {
+        NafathRequest request = new NafathRequest();
+        request.setNationalId(nationalId);
+        
+        request.setRandomCode(new Random().nextInt(90) + 10);
+        request.setStatus("PENDING");
+        
+        return repository.save(request);
     }
 
-    public String checkStatus(UUID id){
-        return nafathRequestRepo.findById(id)
+    public String checkStatus(UUID id) {
+        return repository.findById(id)
                 .map(NafathRequest::getStatus)
                 .orElse("NOT_FOUND");
     }
 
-    public void simulateApproval(UUID id, String status){
-        NafathRequest nafathRequest = nafathRequestRepo.findById(id).orElseThrow();
-        nafathRequest.setStatus(status);
-        nafathRequestRepo.save(nafathRequest);
+    public void simulateApproval(UUID id, String newStatus) {
+        repository.findById(id).ifPresent(request -> {
+            request.setStatus(newStatus);
+            repository.save(request);
+        });
     }
 }
