@@ -31,8 +31,7 @@ jobs:
       - name: Build with Maven
         run: |
           cd backend
-          ./mvnw clean package -DskipTests=false 
-          # Note: Set skipTests to true if you haven't written JUnit tests yet
+          mvn clean package -DskipTests=false
 
   frontend-ci:
     runs-on: ubuntu-latest

@@ -42,7 +42,7 @@ cd frontend
 npm install
 npm run dev
 ```
-## 🧠 Technical Highlights (Senior Level)
+## 🧠 Technical Highlights
 
 ### 🚀 AI Risk Assessment Middleware
 Unlike standard auth flows, this system intercepts the /initiate request to perform:
