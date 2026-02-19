@@ -1,22 +1,27 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { ShieldCheck, Loader2, Smartphone, CheckCircle2, XCircle, ChevronRight, AlertCircle } from 'lucide-react';
+"use client";
 
-export default function NafathLoginPage() {
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, BrainCircuit, Smartphone, Loader2, CheckCircle2, AlertTriangle, MapPin } from 'lucide-react';
+
+const API_BASE = "http://localhost:8080/nafath/api/v1";
+
+export default function NafathPage() {
+  // State Machine
+  const [step, setStep] = useState<'IDLE' | 'SCANNING' | 'CHALLENGE' | 'SUCCESS' | 'ERROR'>('IDLE');
   const [nationalId, setNationalId] = useState('');
   const [requestId, setRequestId] = useState<string | null>(null);
   const [randomCode, setRandomCode] = useState<number | null>(null);
-  const [status, setStatus] = useState<'IDLE' | 'WAITING' | 'COMPLETED' | 'EXPIRED' | 'REJECTED'>('IDLE');
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [aiInsight, setAiInsight] = useState<{ score: number; verdict: string; reason: string } | null>(null);
+  const [error, setError] = useState('');
 
-  const API_BASE = "http://localhost:8080/nafath/api/v1";
-
-  const handleInitiate = async (e: React.FormEvent) => {
+  // 1. Initiate Login with AI Risk Assessment
+  const handleStartAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setErrorMessage(null);
-    
+    if (nationalId.length !== 10) return setError("National ID must be 10 digits");
+
+    setStep('SCANNING');
+    setError('');
+
     try {
       const res = await fetch(`${API_BASE}/initiate`, {
         method: 'POST',
@@ -24,142 +29,183 @@ export default function NafathLoginPage() {
         body: JSON.stringify({ nationalId }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to initiate request");
+        setStep('ERROR');
+        setError(data.reason || "AI Security Block: Request rejected.");
+        return;
       }
 
-      const data = await res.json();
-      setRequestId(data.id);
-      setRandomCode(data.randomCode);
-      setStatus('WAITING');
-    } catch (err: any) {
-      setErrorMessage(err.message || "Connection failed. Is Spring Boot running?");
-    } finally {
-      setLoading(false);
+      setAiInsight(data.aiInsight);
+      setRequestId(data.nafath.id);
+      setRandomCode(data.nafath.randomCode);
+      
+      // Delay slightly to show the "Scanning" animation for UX
+      setTimeout(() => setStep('CHALLENGE'), 1500);
+    } catch (err) {
+      setStep('ERROR');
+      setError("Failed to connect to Security Gateway.");
     }
   };
 
+  // 2. Polling for Status Updates
   useEffect(() => {
-    if (status !== 'WAITING' || !requestId) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/status/${requestId}`);
-        if (res.ok) {
+    let interval: NodeJS.Timeout;
+    if (step === 'CHALLENGE' && requestId) {
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch(`${API_BASE}/status/${requestId}`);
           const data = await res.json();
-          if (data.status !== 'PENDING') {
-            setStatus(data.status);
-            clearInterval(interval);
+          if (data.status === 'COMPLETED') setStep('SUCCESS');
+          if (data.status === 'REJECTED') {
+            setStep('ERROR');
+            setError("Request rejected via mobile app.");
           }
+        } catch (e) {
+          console.error("Polling error", e);
         }
-      } catch (err) {
-        console.error("Polling error:", err);
-      }
-    }, 2000);
-
+      }, 2000);
+    }
     return () => clearInterval(interval);
-  }, [status, requestId]);
+  }, [step, requestId]);
 
-  const simulateAction = async (newStatus: string) => {
+  // 3. Mobile Simulator (PATCH)
+  const simulateMobileAppApproval = async () => {
+    if (!requestId) return;
     try {
       await fetch(`${API_BASE}/mock-callback/${requestId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: 'COMPLETED' }),
       });
     } catch (err) {
-      console.error("Simulation failed:", err);
+      console.error("Simulation failed", err);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+    <div className="min-h-screen bg-[#0a0c10] text-slate-200 flex flex-col items-center justify-center p-6 font-sans">
+      <div className="w-full max-w-md">
         
-        <div className="bg-[#00a651] p-8 text-center text-white">
-          <ShieldCheck className="w-12 h-12 mx-auto mb-2" />
-          <h1 className="text-2xl font-bold">Nafath SSO</h1>
-          <p className="text-emerald-100 text-sm">National Single Sign-On</p>
-        </div>
-
-        <div className="p-8">
-          {errorMessage && (
-            <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 flex items-center gap-3">
-              <AlertCircle size={20} />
-              <p className="text-sm font-medium">{errorMessage}</p>
-            </div>
-          )}
-
-          {status === 'IDLE' && (
-            <form onSubmit={handleInitiate} className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">National ID / Iqama</label>
-                <input
-                  required
-                  type="text"
-                  maxLength={10}
-                  className="w-full px-4 py-4 border-2 border-gray-100 rounded-xl focus:border-[#00a651] outline-none transition-all text-lg"
-                  value={nationalId}
-                  onChange={(e) => setNationalId(e.target.value)}
-                  placeholder="e.g. 1023456789"
-                />
-              </div>
-              <button 
-                disabled={loading}
-                className="w-full bg-[#00a651] hover:bg-[#008c44] text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2"
-              >
-                {loading ? <Loader2 className="animate-spin" /> : "Sign In"}
-                {!loading && <ChevronRight size={20} />}
-              </button>
-            </form>
-          )}
-
-          {status === 'WAITING' && (
-            <div className="text-center space-y-6">
-              <div className="relative flex justify-center">
-                <Smartphone className="w-20 h-20 text-gray-100" />
-                <Loader2 className="absolute top-7 w-8 h-8 text-[#00a651] animate-spin" />
-              </div>
-              <div>
-                <p className="text-gray-500 font-medium">Open Nafath App and select:</p>
-                <div className="text-7xl font-black text-[#00a651] my-4">{randomCode}</div>
-                <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold py-1 px-3 rounded-full uppercase tracking-wider">
-                  Waiting for Biometric
-                </span>
-              </div>
-            </div>
-          )}
-
-          {status === 'COMPLETED' && (
-            <div className="text-center py-6">
-              <CheckCircle2 className="w-20 h-20 text-[#00a651] mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-800">Verified!</h2>
-              <p className="text-gray-500">Welcome to your dashboard.</p>
-              <button onClick={() => window.location.reload()} className="mt-6 text-[#00a651] font-bold underline">Logout</button>
-            </div>
-          )}
-
-          {status === 'REJECTED' && (
-            <div className="text-center py-6">
-              <XCircle className="w-20 h-20 text-red-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-800">Rejected</h2>
-              <p className="text-gray-500">The request was denied on the device.</p>
-              <button onClick={() => setStatus('IDLE')} className="mt-6 text-gray-500 underline">Try Again</button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {status === 'WAITING' && (
-        <div className="mt-8 bg-slate-900 text-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-700">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Mobile App Simulator</p>
-          <div className="flex gap-4">
-            <button onClick={() => simulateAction('COMPLETED')} className="flex-1 bg-emerald-600 py-3 rounded-xl font-bold hover:bg-emerald-500 transition-colors">Approve</button>
-            <button onClick={() => simulateAction('REJECTED')} className="flex-1 bg-rose-600 py-3 rounded-xl font-bold hover:bg-rose-500 transition-colors">Reject</button>
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 mb-4 border border-emerald-500/20">
+            <ShieldCheck className="text-emerald-500 w-8 h-8" />
           </div>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Nafath Secure Access</h1>
+          <p className="text-slate-500 text-sm mt-2">National Single Sign-On Simulation</p>
         </div>
-      )}
+
+        {/* Step 1: Input */}
+        {step === 'IDLE' && (
+          <form onSubmit={handleStartAuth} className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase ml-1">National ID / Iqama</label>
+              <input
+                type="text"
+                maxLength={10}
+                value={nationalId}
+                onChange={(e) => setNationalId(e.target.value)}
+                placeholder="1XXXXXXXXX"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3.5 text-lg focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all placeholder:text-slate-700"
+              />
+            </div>
+            <button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-900/20 transition-all flex items-center justify-center gap-2">
+              Sign In
+            </button>
+          </form>
+        )}
+
+        {/* Step 2: AI Scanning */}
+        {step === 'SCANNING' && (
+          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-10 text-center space-y-6">
+            <div className="relative flex justify-center">
+              <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full" />
+              <Loader2 className="w-16 h-16 text-blue-500 animate-spin relative z-10" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">AI Risk Assessment</h3>
+              <p className="text-slate-400 text-sm mt-1">Analyzing behavioral patterns & location integrity...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Challenge */}
+        {step === 'CHALLENGE' && (
+          <div className="space-y-6 animate-in zoom-in-95">
+            {/* AI Insights Card */}
+            <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 flex gap-4 items-start">
+              <BrainCircuit className="text-blue-400 shrink-0 mt-1" />
+              <div>
+                <p className="text-xs font-bold text-blue-400 uppercase tracking-tighter">AI Analysis Verdict</p>
+                <p className="text-sm text-blue-100/80 leading-snug mt-1">{aiInsight?.reason}</p>
+              </div>
+            </div>
+
+            {/* Nafath Challenge Card */}
+            <div className="bg-white rounded-3xl p-8 text-center shadow-2xl overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-4 opacity-5">
+                 <Smartphone size={120} />
+              </div>
+              <p className="text-slate-500 font-medium mb-2">Open the Nafath app and select</p>
+              <div className="text-7xl font-black text-slate-900 tracking-tighter tabular-nums">
+                {randomCode}
+              </div>
+              <div className="mt-8 flex items-center justify-center gap-2 text-emerald-600 bg-emerald-50 py-2 px-4 rounded-full w-fit mx-auto">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-xs font-bold uppercase">Waiting for mobile approval</span>
+              </div>
+            </div>
+
+            {/* Mobile Simulator Panel */}
+            <div className="bg-slate-900 rounded-2xl p-4 border border-slate-800">
+               <button 
+                onClick={simulateMobileAppApproval}
+                className="w-full flex items-center justify-between group hover:bg-slate-800 p-2 rounded-lg transition-colors"
+               >
+                 <div className="flex items-center gap-3">
+                    <div className="p-2 bg-slate-800 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
+                      <Smartphone className="w-4 h-4 text-slate-400 group-hover:text-emerald-500" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-white">Dev Simulator</p>
+                      <p className="text-[10px] text-slate-500">Trigger Mobile Approval</p>
+                    </div>
+                 </div>
+                 <div className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold rounded-md">APPROVE</div>
+               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Success */}
+        {step === 'SUCCESS' && (
+          <div className="text-center space-y-6 animate-in fade-in scale-95">
+            <div className="inline-flex p-6 rounded-full bg-emerald-500/20 text-emerald-500 shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)]">
+              <CheckCircle2 size={64} />
+            </div>
+            <h2 className="text-3xl font-bold text-white">Verified Successfully</h2>
+            <p className="text-slate-400">Welcome back. Your identity has been confirmed.</p>
+            <button 
+              onClick={() => setStep('IDLE')}
+              className="px-8 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-bold transition-all"
+            >
+              Back to Home
+            </button>
+          </div>
+        )}
+
+        {/* Errors */}
+        {step === 'ERROR' && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center space-y-4">
+             <AlertTriangle className="mx-auto text-red-500 w-10 h-10" />
+             <p className="text-red-200 font-medium">{error}</p>
+             <button onClick={() => setStep('IDLE')} className="text-sm text-red-400 font-bold underline">Try again with a different ID</button>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

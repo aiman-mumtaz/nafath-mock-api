@@ -15,7 +15,9 @@ import com.aiman.api.dto.InitiateRequest;
 import com.aiman.api.dto.NafathResponse;
 import com.aiman.api.entity.NafathRequest;
 import com.aiman.api.service.NafathService;
+import com.aiman.api.service.RiskAssessmentService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,11 +37,25 @@ import org.springframework.web.bind.annotation.RequestBody;
 public class NafathController {
 
     @Autowired private NafathService nafathService;
+    @Autowired private RiskAssessmentService riskService;
 
-    // 1. Initiate the request
     @PostMapping("/initiate")
-    public ResponseEntity<NafathRequest> initiateNafathRequest(@Valid @RequestBody InitiateRequest req){
-        return ResponseEntity.ok(nafathService.initiateNafathRequest(req.nationalId()));
+    public ResponseEntity<?> initiate(@RequestBody InitiateRequest req, HttpServletRequest request) {
+        // 1. Context Collection
+        String ip = request.getRemoteAddr();
+        String ua = request.getHeader("User-Agent");
+
+        // 2. AI Risk Assessment (The "Gatekeeper")
+        var risk = riskService.analyze(req.nationalId(), ip, ua);
+
+        if ("BLOCK".equals(risk.status()) || risk.score() > 0.85) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Security Block", "reason", risk.reason()));
+        }
+
+        // 3. Only if safe, proceed to business logic
+        NafathRequest nafath = nafathService.initiateNafathRequest(req.nationalId());
+        return ResponseEntity.ok(Map.of("nafath", nafath, "aiInsight", risk));
     }
     // 2. Poll for status
     @GetMapping("/status/{id}")
