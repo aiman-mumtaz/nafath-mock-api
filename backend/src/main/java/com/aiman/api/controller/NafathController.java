@@ -41,11 +41,10 @@ public class NafathController {
 
     @PostMapping("/initiate")
     public ResponseEntity<?> initiate(@RequestBody InitiateRequest req, HttpServletRequest request) {
-        // 1. Context Collection
+
         String ip = request.getRemoteAddr();
         String ua = request.getHeader("User-Agent");
 
-        // 2. AI Risk Assessment (The "Gatekeeper")
         var risk = riskService.analyze(req.nationalId(), ip, ua);
 
         if ("BLOCK".equals(risk.status()) || risk.score() > 0.85) {
@@ -53,11 +52,10 @@ public class NafathController {
                     .body(Map.of("error", "Security Block", "reason", risk.reason()));
         }
 
-        // 3. Only if safe, proceed to business logic
         NafathRequest nafath = nafathService.initiateNafathRequest(req.nationalId());
         return ResponseEntity.ok(Map.of("nafath", nafath, "aiInsight", risk));
     }
-    // 2. Poll for status
+
     @GetMapping("/status/{id}")
     public ResponseEntity<?> poll (@PathVariable String id) {
         // String status = nafathService.checkStatus(id);
@@ -74,8 +72,7 @@ public class NafathController {
                 .body("Invalid ID format. Please provide a valid UUID.");
         }
     }
-    
-    // 3. Mock simulate the user clicking "Approve" in the Nafath App
+
     @PatchMapping("/simulate-approval/{id}")
     public void simulateApproval(@PathVariable UUID id, @RequestBody Map<String, String> body){
         nafathService.simulateApproval(id, body.get("status"));
