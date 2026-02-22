@@ -14,7 +14,6 @@ export default function NafathPage() {
   const [aiInsight, setAiInsight] = useState<{ score: number; verdict: string; reason: string } | null>(null);
   const [error, setError] = useState('');
 
-  // 1. Initiate Login with AI Risk Assessment
   const handleStartAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (nationalId.length !== 10) return setError("National ID must be 10 digits");
@@ -40,8 +39,6 @@ export default function NafathPage() {
       setAiInsight(data.aiInsight);
       setRequestId(data.nafath.id);
       setRandomCode(data.nafath.randomCode);
-      
-      // Delay slightly to show the "Scanning" animation for UX
       setTimeout(() => setStep('CHALLENGE'), 1500);
     } catch (err) {
       setStep('ERROR');
@@ -49,7 +46,6 @@ export default function NafathPage() {
     }
   };
 
-  // 2. Polling for Status Updates
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (step === 'CHALLENGE' && requestId) {
@@ -70,7 +66,6 @@ export default function NafathPage() {
     return () => clearInterval(interval);
   }, [step, requestId]);
 
-  // 3. Mobile Simulator (PATCH)
   const simulateMobileAppApproval = async () => {
     if (!requestId) return;
     try {
@@ -88,7 +83,6 @@ export default function NafathPage() {
     <div className="min-h-screen bg-[#0a0c10] text-slate-200 flex flex-col items-center justify-center p-6 font-sans">
       <div className="w-full max-w-md">
         
-        {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 mb-4 border border-emerald-500/20">
             <ShieldCheck className="text-emerald-500 w-8 h-8" />
@@ -97,7 +91,6 @@ export default function NafathPage() {
           <p className="text-slate-500 text-sm mt-2">National Single Sign-On Simulation</p>
         </div>
 
-        {/* Step 1: Input */}
         {step === 'IDLE' && (
           <form onSubmit={handleStartAuth} className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
             <div className="space-y-2">
@@ -117,7 +110,6 @@ export default function NafathPage() {
           </form>
         )}
 
-        {/* Step 2: AI Scanning */}
         {step === 'SCANNING' && (
           <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-10 text-center space-y-6">
             <div className="relative flex justify-center">
@@ -131,10 +123,8 @@ export default function NafathPage() {
           </div>
         )}
 
-        {/* Step 3: Challenge */}
         {step === 'CHALLENGE' && (
           <div className="space-y-6 animate-in zoom-in-95">
-            {/* AI Insights Card */}
             <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 flex gap-4 items-start">
               <BrainCircuit className="text-blue-400 shrink-0 mt-1" />
               <div>
@@ -143,7 +133,6 @@ export default function NafathPage() {
               </div>
             </div>
 
-            {/* Nafath Challenge Card */}
             <div className="bg-white rounded-3xl p-8 text-center shadow-2xl overflow-hidden relative">
               <div className="absolute top-0 right-0 p-4 opacity-5">
                  <Smartphone size={120} />
@@ -158,7 +147,6 @@ export default function NafathPage() {
               </div>
             </div>
 
-            {/* Mobile Simulator Panel */}
             <div className="bg-slate-900 rounded-2xl p-4 border border-slate-800">
                <button 
                 onClick={simulateMobileAppApproval}
@@ -179,7 +167,6 @@ export default function NafathPage() {
           </div>
         )}
 
-        {/* Step 4: Success */}
         {step === 'SUCCESS' && (
           <div className="text-center space-y-6 animate-in fade-in scale-95">
             <div className="inline-flex p-6 rounded-full bg-emerald-500/20 text-emerald-500 shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)]">
@@ -196,7 +183,6 @@ export default function NafathPage() {
           </div>
         )}
 
-        {/* Errors */}
         {step === 'ERROR' && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center space-y-4">
              <AlertTriangle className="mx-auto text-red-500 w-10 h-10" />

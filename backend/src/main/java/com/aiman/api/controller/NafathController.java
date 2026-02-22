@@ -18,7 +18,6 @@ import com.aiman.api.service.NafathService;
 import com.aiman.api.service.RiskAssessmentService;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -58,8 +57,6 @@ public class NafathController {
 
     @GetMapping("/status/{id}")
     public ResponseEntity<?> poll (@PathVariable String id) {
-        // String status = nafathService.checkStatus(id);
-        // return ResponseEntity.ok(new NafathResponse(id, null, status));
         try {
             UUID uuid = UUID.fromString(id);
             

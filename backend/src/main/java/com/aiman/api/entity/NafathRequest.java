@@ -30,7 +30,6 @@ public class NafathRequest {
     @Column(name = "updated_at")
     private Timestamp updatedAt;
 
-    // Standard Boilerplate (Guarantees the compiler won't fail)
     public NafathRequest() {}
 
     public UUID getId() { return id; }
